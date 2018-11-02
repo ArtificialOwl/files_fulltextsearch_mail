@@ -1,0 +1,12 @@
+{
+  "name": "nextcloud/files_fulltextsearch_mail",
+  "description": "Files - Fulltextsearch - Mail",
+  "minimum-stability": "stable",
+  "license": "agpl",
+  "authors": [
+    {
+      "name": "Maxence Lange",
+      "email": "maxence@artificial-owl.com"
+    }
+  ],
+}
