@@ -1,15 +1,10 @@
 # files_fulltextsearch_mail
-OCR your documents before index
+
+Parse your mail before index
 
 ### Installation / Setup
 
-- install Tesseract
+you need NC15 and php-mailparser
 
-- download language files from: https://github.com/tesseract-ocr/tessdata
+>     $ make composer
 
-- copy language files into /usr/share/tessdata/ (or /usr/share/tesseract-ocr/tessdata/, depends on our distribution)
-
-
-- configure this app in the Full text search Admin panel
-
-- report bugs
