@@ -81,6 +81,12 @@ class Application extends App {
 				$this->mailService->onSearchRequest($e);
 			}
 		);
+		$eventDispatcher->addListener(
+			'\OCA\Files_FullTextSearch::onSearchResult',
+			function(GenericEvent $e) {
+				$this->mailService->onSearchResult($e);
+			}
+		);
 	}
 }
 

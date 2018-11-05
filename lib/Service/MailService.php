@@ -32,12 +32,12 @@ namespace OCA\Files_FullTextSearch_Mail\Service;
 
 
 use Exception;
-use OC\Files\View;
 use OCP\Files\File;
 use OCP\Files\Node;
-use OCP\Files\NotFoundException;
 use OCP\Files_FullTextSearch\Model\AFilesDocument;
 use OCP\FullTextSearch\Model\IndexDocument;
+use OCP\FullTextSearch\Model\ISearchRequest;
+use OCP\FullTextSearch\Model\ISearchResult;
 use PhpMimeMailParser\Parser;
 use Symfony\Component\EventDispatcher\GenericEvent;
 use thiagoalessio\TesseractOCR\TesseractOCR;
@@ -102,6 +102,10 @@ class MailService {
 	 * @param GenericEvent $e
 	 */
 	public function onFileIndexing(GenericEvent $e) {
+//		if ($this->configService->getAppValue(ConfigService::MAILPARSE_ENABLED) !== '1') {
+//			return;
+//		}
+
 		/** @var Node $file */
 		$file = $e->getArgument('file');
 
@@ -109,7 +113,7 @@ class MailService {
 			return;
 		}
 
-		/** @var \OCP\Files_FullTextSearch\Model\AFilesDocument $document */
+		/** @var AFilesDocument $document */
 		$document = $e->getArgument('document');
 
 		if ($file->getExtension() !== 'eml') {
@@ -124,6 +128,28 @@ class MailService {
 	 * @param GenericEvent $e
 	 */
 	public function onSearchRequest(GenericEvent $e) {
+		/** @var ISearchRequest $request */
+		$request = $e->getArgument('request');
+
+		foreach ($request->getOptionArray('and:from', []) as $from) {
+			$request->addWildcardFilter(['from' => '*' . strtolower($from) . '*']);
+		}
+
+		foreach ($request->getOptionArray('and:to', []) as $to) {
+			$request->addWildcardFilter(['to' => '*' . strtolower($to) . '*']);
+		}
+	}
+
+
+	/**
+	 * @param GenericEvent $e
+	 */
+	public function onSearchResult(GenericEvent $e) {
+
+		/** @var ISearchResult $result */
+		$result = $e->getArgument('result');
+
+//		$this->miscService->log('###' . json_encode($result));
 	}
 
 
@@ -134,47 +160,34 @@ class MailService {
 	private function extractContent(AFilesDocument &$document, File $file) {
 
 		try {
-//			if ($this->configService->getAppValue(ConfigService::TESSERACT_ENABLED) !== '1') {
-//				return;
-//			}
-
-//			$extension = pathinfo($document->getPath(), PATHINFO_EXTENSION);
-//			if (!$this->parsedMimeType($document->getMimetype(), $extension)) {
-//				return;
-//			}
-
-			// TODO: How to set options so that the index can be reset if admin settings are changed
-			//	$this->configService->setDocumentIndexOption($document, ConfigService::FILES_OCR);
-
 			$Parser = new Parser();
 
 			$Parser->setText($file->getContent());
 
+			$to = array_map(
+				function($item) {
+					return $item['address'];
+				}, $Parser->getAddresses('to')
+			);
 
-// Once we've indicated where to find the mail, we can parse out the data
-			$to = $Parser->getHeader(
-				'to'
-			);             // "test" <test@example.com>, "test2" <test2@example.com>
-			$addressesTo = $Parser->getAddresses(
-				'to'
-			); //Return an array : [["display"=>"test", "address"=>"test@example.com", false],["display"=>"test2", "address"=>"test2@example.com", false]]
-
-			$from = $Parser->getHeader('from');             // "test" <test@example.com>
-			$addressesFrom = $Parser->getAddresses(
-				'from'
-			); //Return an array : [["display"=>"test", "address"=>"test@example.com", "is_group"=>false]]
+			$from = array_map(
+				function($item) {
+					return $item['address'];
+				}, $Parser->getAddresses('from')
+			);
 
 			$subject = $Parser->getHeader('subject');
 
-			$text = $Parser->getMessageBody('text');
-
-
-			$content = $text;
+			$document->setInfoArray('to', $to);
+			$document->setInfoArray('from', $from);
+			$document->addPart('subject', $subject);
+			$document->setContent(
+				base64_encode($Parser->getMessageBody('text')), IndexDocument::ENCODED_BASE64
+			);
 		} catch (Exception $e) {
 			return;
 		}
 
-		$document->setContent(base64_encode($content), IndexDocument::ENCODED_BASE64);
 	}
 
 
