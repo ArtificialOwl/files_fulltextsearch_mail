@@ -8,6 +8,10 @@
 
 Extension to the _Full text search - Files_ app to parse your mails before index.
 
+Adds the search options:
+   - and:from:mail@example.com, and:from:@example.com
+   - and:to:mail@example.com, and:to:@example.com
+
 	]]>
 	</description>
 	<version>0.2.0</version>
